@@ -1,8 +1,8 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Income } from "@/types/income";
 import { Expense } from "@/types/expense";
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Define the shape of our context data
 interface UserData {
@@ -63,7 +63,9 @@ const fetchUserDataFn = async (): Promise<UserData> => {
 };
 
 // Create a provider component
-export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const queryClient = useQueryClient();
 
   // Use TanStack Query to fetch and cache user data
@@ -71,25 +73,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     data = { income: [], expenses: [], user: null },
     isLoading,
     isError,
-    refetch
+    refetch,
   } = useQuery({
-    queryKey: ['userData'],
+    queryKey: ["userData"],
     queryFn: fetchUserDataFn,
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
   // Function to manually refetch data
   const fetchUserData = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['userData'] });
+    await queryClient.invalidateQueries({ queryKey: ["userData"] });
   };
 
   return (
-    <DataContext.Provider value={{
-      userData: data,
-      isLoading,
-      isError,
-      fetchUserData
-    }}>
+    <DataContext.Provider
+      value={{
+        userData: data,
+        isLoading,
+        isError,
+        fetchUserData,
+      }}
+    >
       {children}
     </DataContext.Provider>
   );
@@ -99,7 +103,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useData = () => {
   const context = useContext(DataContext);
   if (context === undefined) {
-    throw new Error('useData must be used within a DataProvider');
+    throw new Error("useData must be used within a DataProvider");
   }
   return context;
 };
