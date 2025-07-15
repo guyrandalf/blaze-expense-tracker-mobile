@@ -2,12 +2,14 @@ import React, { createContext, useContext } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Income } from "@/types/income";
 import { Expense } from "@/types/expense";
+import { Budget } from "@/types/budget";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 // Define the shape of our context data
 interface UserData {
   income: Income[];
   expenses: Expense[];
+  budgets: Budget[];
   user: {
     id: string;
     email: string;
@@ -27,7 +29,7 @@ interface DataContextType {
 
 // Create the context with default values
 const DataContext = createContext<DataContextType>({
-  userData: { income: [], expenses: [], user: null },
+  userData: { income: [], expenses: [], budgets: [], user: null },
   isLoading: false,
   isError: false,
   fetchUserData: async () => {},
@@ -37,7 +39,7 @@ const DataContext = createContext<DataContextType>({
 const fetchUserDataFn = async (): Promise<UserData> => {
   const storedToken = await AsyncStorage.getItem("token");
   if (!storedToken) {
-    return { income: [], expenses: [], user: null };
+    return { income: [], expenses: [], budgets: [], user: null };
   }
 
   const response = await fetch(
@@ -58,6 +60,7 @@ const fetchUserDataFn = async (): Promise<UserData> => {
   return {
     income: data.income || [],
     expenses: data.expenses || [],
+    budgets: data.budgets || [],
     user: data.user || null,
   };
 };

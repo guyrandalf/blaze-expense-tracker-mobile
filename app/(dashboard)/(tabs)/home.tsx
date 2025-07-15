@@ -11,6 +11,17 @@ import { Colors } from "../../utils/constant";
 import React, { useState, useEffect } from "react";
 import { useFocusEffect } from "@react-navigation/native";
 import { useData } from "@/context/DataContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+interface BudgetAnalysis {
+  budget: {
+    amount: number;
+    month: number;
+    year: number;
+  } | null;
+  totalExpenses: number;
+  difference: number | null;
+}
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -18,6 +29,9 @@ export default function HomeScreen() {
   const [currentMonthIncome, setCurrentMonthIncome] = useState<number>(0);
   const [currentMonthExpenses, setCurrentMonthExpenses] = useState<number>(0);
   const [previousMonthRollover, setPreviousMonthRollover] = useState<number>(0);
+  const [budgetAnalysis, setBudgetAnalysis] = useState<BudgetAnalysis | null>(
+    null
+  );
 
   // Helper function to get current year and month in YYYY-MM format
   function getCurrentYearMonth() {
@@ -27,6 +41,11 @@ export default function HomeScreen() {
       "0"
     )}`;
   }
+
+  const getCurrentYearMonthNum = () => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  };
 
   // Calculate previous month's rollover and filter data for current month
   useEffect(() => {
@@ -96,6 +115,24 @@ export default function HomeScreen() {
     }
   }, [userData.income, userData.expenses]);
 
+  useEffect(() => {
+    const fetchBudgetAnalysis = async () => {
+      const { year, month } = getCurrentYearMonthNum();
+      const storedToken = await AsyncStorage.getItem("token");
+      if (!storedToken) return;
+      const res = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/budget/analysis?month=${month}&year=${year}`,
+        {
+          headers: { Authorization: `Bearer ${storedToken}` },
+        }
+      );
+      if (res.ok) {
+        setBudgetAnalysis(await res.json());
+      }
+    };
+    fetchBudgetAnalysis();
+  }, [userData.expenses]);
+
   // Refresh data when screen is focused
   useFocusEffect(
     React.useCallback(() => {
@@ -137,6 +174,11 @@ export default function HomeScreen() {
   const balance =
     previousMonthRollover + currentMonthIncome - currentMonthExpenses;
 
+  const nairaFormatter = new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       {isLoading ? (
@@ -159,16 +201,17 @@ export default function HomeScreen() {
                   balance < 0 ? styles.negativeBalance : {},
                 ]}
               >
-                ${balance.toFixed(2)}
+                {nairaFormatter.format(balance)}
               </Text>
               <Text style={styles.rolloverText}>
-                Previous Month Rollover: ${previousMonthRollover.toFixed(2)}
+                Previous Month Rollover:{" "}
+                {nairaFormatter.format(previousMonthRollover)}
               </Text>
               <View style={styles.summaryRow}>
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryItemLabel}>Month Income</Text>
                   <Text style={styles.summaryItemValue}>
-                    ${currentMonthIncome.toFixed(2)}
+                    {nairaFormatter.format(currentMonthIncome)}
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
@@ -176,7 +219,7 @@ export default function HomeScreen() {
                   <Text
                     style={[styles.summaryItemValue, { color: Colors.error }]}
                   >
-                    ${currentMonthExpenses.toFixed(2)}
+                    {nairaFormatter.format(currentMonthExpenses)}
                   </Text>
                 </View>
               </View>
@@ -196,7 +239,7 @@ export default function HomeScreen() {
                         {income.source || "Unnamed Source"}
                       </Text>
                       <Text style={styles.incomeAmount}>
-                        ${income.amount.toFixed(2)}
+                        {nairaFormatter.format(income.amount)}
                       </Text>
                     </View>
                     {income.isRecurring && (
@@ -223,7 +266,7 @@ export default function HomeScreen() {
                         {expense.name || "Unnamed Expense"}
                       </Text>
                       <Text style={styles.expenseAmount}>
-                        ${expense.amount.toFixed(2)}
+                        {nairaFormatter.format(expense.amount)}
                       </Text>
                     </View>
                     {expense.isRecurring && (
@@ -243,24 +286,26 @@ export default function HomeScreen() {
             </Text>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Total Income:</Text>
-              <Text style={styles.statValue}>${totalIncome.toFixed(2)}</Text>
+              <Text style={styles.statValue}>
+                {nairaFormatter.format(totalIncome)}
+              </Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Recurring Income:</Text>
               <Text style={styles.statValue}>
-                ${totalRecurringIncome.toFixed(2)}
+                {nairaFormatter.format(totalRecurringIncome)}
               </Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Total Expenses:</Text>
               <Text style={[styles.statValue, { color: Colors.error }]}>
-                ${totalExpenses.toFixed(2)}
+                {nairaFormatter.format(totalExpenses)}
               </Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statLabel}>Recurring Expenses:</Text>
               <Text style={[styles.statValue, { color: Colors.error }]}>
-                ${totalRecurringExpenses.toFixed(2)}
+                {nairaFormatter.format(totalRecurringExpenses)}
               </Text>
             </View>
             <View style={styles.statItem}>
@@ -273,9 +318,36 @@ export default function HomeScreen() {
                     : {},
                 ]}
               >
-                ${(totalIncome - totalExpenses).toFixed(2)}
+                {nairaFormatter.format(totalIncome - totalExpenses)}
               </Text>
             </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              Budget Analysis (This Month)
+            </Text>
+            {budgetAnalysis && budgetAnalysis.budget ? (
+              <>
+                <Text>
+                  Budget: {nairaFormatter.format(budgetAnalysis.budget.amount)}
+                </Text>
+                <Text>
+                  Total Expenses:{" "}
+                  {nairaFormatter.format(budgetAnalysis.totalExpenses)}
+                </Text>
+                <Text>
+                  Difference:{" "}
+                  {nairaFormatter.format(budgetAnalysis.difference || 0)}
+                  {budgetAnalysis.difference !== null &&
+                  budgetAnalysis.difference < 0
+                    ? " (Over budget)"
+                    : " (Within budget)"}
+                </Text>
+              </>
+            ) : (
+              <Text>No budget set for this month.</Text>
+            )}
           </View>
         </ScrollView>
       )}
