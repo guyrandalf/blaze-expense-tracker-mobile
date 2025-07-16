@@ -1,5 +1,4 @@
-import { StyleSheet, Text, TextInput, Alert } from "react-native"
-import { SafeAreaView } from "react-native-safe-area-context"
+import { StyleSheet, Text, TextInput, Alert, SafeAreaView } from "react-native"
 import { Colors } from "@/app/utils/constant"
 import { Link } from "expo-router"
 import { useState } from "react"

@@ -6,6 +6,7 @@ import {
   Text,
   View,
   TextInput,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../lib/auth";
@@ -52,38 +53,7 @@ export default function ProfileScreen() {
   };
 
   const [budgetAmount, setBudgetAmount] = useState("");
-  const [currentBudget, setCurrentBudget] = useState<number | null>(null);
-  const [isBudgetSubmitting, setIsBudgetSubmitting] = useState(false);
   const { year, month } = getCurrentYearMonthNum();
-  useEffect(() => {
-    const found = userData.budgets.find(
-      (b) => b.year === year && b.month === month
-    );
-    setCurrentBudget(found ? found.amount : null);
-  }, [userData.budgets]);
-
-  const handleBudgetSubmit = async () => {
-    if (!budgetAmount || isNaN(Number(budgetAmount))) return;
-    setIsBudgetSubmitting(true);
-    const storedToken = await AsyncStorage.getItem("token");
-    if (!storedToken) return;
-    const res = await fetch(
-      `${process.env.EXPO_PUBLIC_API_URL}/api/budget/create`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${storedToken}`,
-        },
-        body: JSON.stringify({ month, year, amount: Number(budgetAmount) }),
-      }
-    );
-    setIsBudgetSubmitting(false);
-    if (res.ok) {
-      setBudgetAmount("");
-      fetchUserData();
-    }
-  };
 
   // Format date for better display
   const formatDate = (dateString: string | undefined) => {
@@ -220,39 +190,6 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             </View>
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Monthly Budget</Text>
-            {currentBudget !== null ? (
-              <Text>
-                Current Budget: {nairaFormatter.format(currentBudget)}
-              </Text>
-            ) : (
-              <Text>No budget set for this month.</Text>
-            )}
-            <TextInput
-              style={styles.input}
-              placeholder="Set/Update Budget (₦)"
-              keyboardType="numeric"
-              value={budgetAmount}
-              onChangeText={setBudgetAmount}
-            />
-            <Pressable
-              onPress={handleBudgetSubmit}
-              style={({ pressed }) => [
-                {
-                  backgroundColor: pressed ? Colors.purpleDark : Colors.primary,
-                  opacity: isBudgetSubmitting ? 0.5 : 1,
-                },
-                styles.logoutButton,
-              ]}
-              disabled={isBudgetSubmitting}
-            >
-              <Text style={styles.logoutText}>
-                {isBudgetSubmitting ? "Saving..." : "Save Budget"}
-              </Text>
-            </Pressable>
           </View>
 
           <View style={styles.logoutContainer}>

@@ -4,6 +4,7 @@ import { Income } from "@/types/income";
 import { Expense } from "@/types/expense";
 import { Budget } from "@/types/budget";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Reimbursement } from "@/types/reimbursement";
 
 // Define the shape of our context data
 interface UserData {
@@ -25,6 +26,21 @@ interface DataContextType {
   isLoading: boolean;
   isError: boolean;
   fetchUserData: () => Promise<void>;
+  // Reimbursement helpers
+  fetchReimbursements: (expenseId: string) => Promise<Reimbursement[]>;
+  addReimbursement: (
+    expenseId: string,
+    data: Partial<Reimbursement>
+  ) => Promise<Reimbursement>;
+  editReimbursement: (
+    expenseId: string,
+    reimbursementId: string,
+    data: Partial<Reimbursement>
+  ) => Promise<Reimbursement>;
+  deleteReimbursement: (
+    expenseId: string,
+    reimbursementId: string
+  ) => Promise<void>;
 }
 
 // Create the context with default values
@@ -33,6 +49,11 @@ const DataContext = createContext<DataContextType>({
   isLoading: false,
   isError: false,
   fetchUserData: async () => {},
+  // Reimbursement helpers
+  fetchReimbursements: async () => [],
+  addReimbursement: async () => ({}),
+  editReimbursement: async () => ({}),
+  deleteReimbursement: async () => {},
 });
 
 // Function to fetch user data
@@ -65,6 +86,78 @@ const fetchUserDataFn = async (): Promise<UserData> => {
   };
 };
 
+// Reimbursement API helpers
+const fetchReimbursements = async (
+  expenseId: string
+): Promise<Reimbursement[]> => {
+  const storedToken = await AsyncStorage.getItem("token");
+  if (!storedToken) return [];
+  const response = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/expense/${expenseId}/reimbursement`,
+    {
+      headers: { Authorization: `Bearer ${storedToken}` },
+    }
+  );
+  if (!response.ok) throw new Error("Failed to fetch reimbursements");
+  return await response.json();
+};
+const addReimbursement = async (
+  expenseId: string,
+  data: Partial<Reimbursement>
+): Promise<Reimbursement> => {
+  const storedToken = await AsyncStorage.getItem("token");
+  if (!storedToken) throw new Error("No token");
+  const response = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/expense/${expenseId}/reimbursement`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${storedToken}`,
+      },
+      body: JSON.stringify(data),
+    }
+  );
+  if (!response.ok) throw new Error("Failed to add reimbursement");
+  return await response.json();
+};
+const editReimbursement = async (
+  expenseId: string,
+  reimbursementId: string,
+  data: Partial<Reimbursement>
+): Promise<Reimbursement> => {
+  const storedToken = await AsyncStorage.getItem("token");
+  if (!storedToken) throw new Error("No token");
+  const response = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/expense/${expenseId}/reimbursement/${reimbursementId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${storedToken}`,
+      },
+      body: JSON.stringify(data),
+    }
+  );
+  if (!response.ok) throw new Error("Failed to edit reimbursement");
+  return await response.json();
+};
+const deleteReimbursement = async (
+  expenseId: string,
+  reimbursementId: string
+): Promise<void> => {
+  const storedToken = await AsyncStorage.getItem("token");
+  if (!storedToken) throw new Error("No token");
+  const response = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/expense/${expenseId}/reimbursement/${reimbursementId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${storedToken}` },
+    }
+  );
+  if (!response.ok) throw new Error("Failed to delete reimbursement");
+};
+
 // Create a provider component
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -95,6 +188,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({
         isLoading,
         isError,
         fetchUserData,
+        fetchReimbursements,
+        addReimbursement,
+        editReimbursement,
+        deleteReimbursement,
       }}
     >
       {children}

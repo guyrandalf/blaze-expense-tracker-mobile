@@ -1,3 +1,5 @@
+import { Reimbursement } from "./reimbursement";
+
 export interface Expense {
   id: string
   userId: string
@@ -10,4 +12,5 @@ export interface Expense {
   endDate?: string | null
   createdAt: string
   updatedAt: string
+  reimbursements?: Reimbursement[];
 }
